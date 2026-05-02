@@ -83,7 +83,7 @@ export function DealsDashboard() {
           body: JSON.stringify({
             eventType: "SEARCH_QUERY",
             userId: userId,
-            dealId: fetchedDeals.map((d: Deal) => d.id).join(","),
+            dealId: fetchedDeals.map((d: Deal) => d.dealId).join(","),
             brandSlug: fetchedDeals.map((d: Deal) => d.brandSlug).join(","),
             queryText: query,
           }),
