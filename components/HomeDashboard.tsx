@@ -6,9 +6,11 @@ import { useCallback, useEffect, useState } from "react";
 import { DealModal } from "@/components/deal-modal";
 import {
   apiBaseUrl,
+  buildQuery,
   withBearerToken,
   type ApiResponse,
   type Deal,
+  type DealsPagination,
 } from "@/lib/deals";
 import { HomeSlider } from "@/components/home_slider";
 import { RecommendDealsSlider } from "@/components/recommend-deals-slider";
@@ -16,7 +18,109 @@ import { HotDealsSlider } from "@/components/hot-deals-slider";
 import { JoinAsBrandSection } from "./join-as-brand-section";
 import { LoginToPersonalizeSection } from "./login-to-personalize-section";
 
-const RECOMMENDED_DEALS_LIMIT = 12;
+const RECOMMENDED_DEALS_PAGE_SIZE = 4;
+const RECOMMENDED_DEALS_FETCH_LIMIT = 12;
+const TOP_DEALS_PAGE_SIZE = 8;
+
+const buildPageItems = (page: number, totalPages: number) => {
+  const pages = new Set<number>();
+  const safeTotal = Math.max(1, totalPages);
+  const safePage = Math.min(Math.max(1, page), safeTotal);
+
+  if (safeTotal <= 5) {
+    for (let i = 1; i <= safeTotal; i += 1) {
+      pages.add(i);
+    }
+  } else {
+    pages.add(1);
+    pages.add(safeTotal);
+    pages.add(safePage);
+    pages.add(safePage - 1);
+    pages.add(safePage + 1);
+  }
+
+  const sorted = [...pages].filter((item) => item >= 1 && item <= safeTotal).sort((a, b) => a - b);
+  const items: Array<number | "ellipsis"> = [];
+
+  sorted.forEach((value, index) => {
+    const previous = sorted[index - 1];
+    if (previous && value - previous > 1) {
+      items.push("ellipsis");
+    }
+    items.push(value);
+  });
+
+  return items;
+};
+
+function PaginationControls({
+  label,
+  page,
+  totalPages,
+  onPageChange,
+}: Readonly<{
+  label: string;
+  page: number;
+  totalPages: number;
+  onPageChange: (nextPage: number) => void;
+}>) {
+  if (totalPages <= 1) {
+    return null;
+  }
+
+  const items = buildPageItems(page, totalPages);
+
+  return (
+    <nav
+      className="mt-6 flex flex-wrap items-center justify-center gap-2 text-xs text-slate-300 sm:text-sm"
+      aria-label={`${label} pagination`}
+    >
+      <button
+        type="button"
+        onClick={() => onPageChange(Math.max(1, page - 1))}
+        disabled={page <= 1}
+        className="rounded-full border border-white/15 px-3 py-1.5 text-xs font-semibold text-white/80 transition hover:border-amber-300/60 hover:text-white disabled:cursor-not-allowed disabled:border-white/10 disabled:text-white/30"
+      >
+        Prev
+      </button>
+
+      {items.map((item, index) =>
+        item === "ellipsis" ? (
+          <span key={`ellipsis-${index}`} className="px-2 text-white/40">
+            ...
+          </span>
+        ) : (
+          <button
+            key={item}
+            type="button"
+            onClick={() => onPageChange(item)}
+            aria-current={item === page ? "page" : undefined}
+            className={`min-w-[32px] rounded-full border px-3 py-1.5 text-xs font-semibold transition sm:text-sm ${
+              item === page
+                ? "border-amber-300/80 bg-amber-400/20 text-amber-200"
+                : "border-white/15 text-white/70 hover:border-amber-300/60 hover:text-white"
+            }`}
+          >
+            {item}
+          </button>
+        )
+      )}
+
+      <button
+        type="button"
+        onClick={() => onPageChange(Math.min(totalPages, page + 1))}
+        disabled={page >= totalPages}
+        className="rounded-full border border-white/15 px-3 py-1.5 text-xs font-semibold text-white/80 transition hover:border-amber-300/60 hover:text-white disabled:cursor-not-allowed disabled:border-white/10 disabled:text-white/30"
+      >
+        Next
+      </button>
+
+      <span className="ml-2 text-[11px] uppercase tracking-[0.2em] text-white/40">
+        Page {page} of {totalPages}
+      </span>
+    </nav>
+  );
+}
 
 export function HomeDashboard() {
   const { user } = useUser();
@@ -25,12 +129,15 @@ export function HomeDashboard() {
 
   const [recommendedDeals, setRecommendedDeals] = useState<Deal[]>([]);
   const [topDeals, setTopDeals] = useState<Deal[]>([]);
+  const [topDealsPagination, setTopDealsPagination] = useState<DealsPagination | null>(null);
 
   const [loadingRecommended, setLoadingRecommended] = useState(false);
   const [loadingTop, setLoadingTop] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
+  const [recommendedPage, setRecommendedPage] = useState(1);
+  const [topDealsPage, setTopDealsPage] = useState(1);
 
 
   const fetchRecommendedDeals = useCallback(async () => {
@@ -46,7 +153,7 @@ export function HomeDashboard() {
       const token = await getToken();
       console.log(token)
       const response = await fetch(
-        `${apiBaseUrl}/api/deals/recommended?userId=${encodeURIComponent(userId)}&limit=${RECOMMENDED_DEALS_LIMIT}`,
+        `${apiBaseUrl}/api/deals/recommended?userId=${encodeURIComponent(userId)}&limit=${RECOMMENDED_DEALS_FETCH_LIMIT}`,
         {
           headers: withBearerToken(token),
         }
@@ -58,6 +165,7 @@ export function HomeDashboard() {
 
       const payload: ApiResponse = await response.json();
       setRecommendedDeals(payload.data ?? []);
+      setRecommendedPage(1);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Unexpected error.");
       setRecommendedDeals([]);
@@ -71,7 +179,11 @@ export function HomeDashboard() {
     setErrorMessage(null);
 
     try {
-      const response = await fetch(`${apiBaseUrl}/api/analytics/trending/deals`);
+      const queryParam = buildQuery({
+        page: String(topDealsPage),
+        limit: String(TOP_DEALS_PAGE_SIZE),
+      });
+      const response = await fetch(`${apiBaseUrl}/api/deals/top?${queryParam}`);
       if (!response.ok) {
         throw new Error("Could not fetch top deals.");
       }
@@ -79,23 +191,46 @@ export function HomeDashboard() {
       const payload: ApiResponse = await response.json();
       console.log("Top deals:", payload.data);
       setTopDeals(payload.data ?? []);
+      setTopDealsPagination(payload.pagination ?? null);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Unexpected error.");
       setTopDeals([]);
+      setTopDealsPagination(null);
     } finally {
       setLoadingTop(false);
     }
-  }, []);
+  }, [topDealsPage]);
 
   useEffect(() => {
+    void fetchRecommendedDeals();
+  }, [fetchRecommendedDeals]);
 
-    const timer = setTimeout(() => {
-      void fetchRecommendedDeals();
-      void fetchTopDeals();
-    }, 0);
+  useEffect(() => {
+    void fetchTopDeals();
+  }, [fetchTopDeals]);
 
-    return () => clearTimeout(timer);
-  }, [fetchRecommendedDeals, fetchTopDeals]);
+  const recommendedTotalPages = Math.max(
+    1,
+    Math.ceil(recommendedDeals.length / RECOMMENDED_DEALS_PAGE_SIZE)
+  );
+  const recommendedPageDeals = recommendedDeals.slice(
+    (recommendedPage - 1) * RECOMMENDED_DEALS_PAGE_SIZE,
+    recommendedPage * RECOMMENDED_DEALS_PAGE_SIZE
+  );
+
+  const topDealsTotalPages = Math.max(1, topDealsPagination?.totalPages ?? 1);
+
+  useEffect(() => {
+    if (recommendedPage > recommendedTotalPages) {
+      setRecommendedPage(recommendedTotalPages);
+    }
+  }, [recommendedPage, recommendedTotalPages]);
+
+  useEffect(() => {
+    if (topDealsPage > topDealsTotalPages) {
+      setTopDealsPage(topDealsTotalPages);
+    }
+  }, [topDealsPage, topDealsTotalPages]);
 
   const images = ['https://res.cloudinary.com/durv0rf9u/image/upload/v1777748574/banner1_ptoawz.png', 'https://res.cloudinary.com/durv0rf9u/image/upload/v1777748573/banner2_grh4tn.png', 'https://res.cloudinary.com/durv0rf9u/image/upload/v1777749246/banner3_wjdqp2.png']
 
@@ -112,10 +247,20 @@ export function HomeDashboard() {
 
 
           <HotDealsSlider
+            key={`top-${topDealsPage}`}
             loading={loadingTop}
             deals={topDeals}
             onDealOpen={setSelectedDeal}
           />
+
+          {topDealsPagination && topDealsPagination.totalPages > 1 && (
+            <PaginationControls
+              label="Top deals"
+              page={topDealsPage}
+              totalPages={topDealsTotalPages}
+              onPageChange={setTopDealsPage}
+            />
+          )}
 
           <div className="flex justify-center pt-2">
             <Link
@@ -151,12 +296,25 @@ export function HomeDashboard() {
             </Link>
           </div>
 
-          {isSignedIn && <RecommendDealsSlider
-            isSignedIn={isSignedIn ?? false}
-            loading={loadingRecommended}
-            deals={recommendedDeals}
-            onDealOpen={setSelectedDeal}
-          />}
+          {isSignedIn && (
+            <>
+              <RecommendDealsSlider
+                key={`recommended-${recommendedPage}`}
+                isSignedIn={isSignedIn ?? false}
+                loading={loadingRecommended}
+                deals={recommendedPageDeals}
+                onDealOpen={setSelectedDeal}
+              />
+              {recommendedTotalPages > 1 && !loadingRecommended && (
+                <PaginationControls
+                  label="Recommended deals"
+                  page={recommendedPage}
+                  totalPages={recommendedTotalPages}
+                  onPageChange={setRecommendedPage}
+                />
+              )}
+            </>
+          )}
 
           {!isSignedIn && <LoginToPersonalizeSection />}
 

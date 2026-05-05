@@ -13,9 +13,112 @@ import {
   withBearerToken,
   type ApiResponse,
   type Deal,
+  type DealsPagination,
 } from "@/lib/deals";
 import { motion, AnimatePresence } from "framer-motion";
 import { HomeSlider } from "./home_slider";
+
+const FILTERED_DEALS_PAGE_SIZE = 20;
+
+const buildPageItems = (page: number, totalPages: number) => {
+  const pages = new Set<number>();
+  const safeTotal = Math.max(1, totalPages);
+  const safePage = Math.min(Math.max(1, page), safeTotal);
+
+  if (safeTotal <= 5) {
+    for (let i = 1; i <= safeTotal; i += 1) {
+      pages.add(i);
+    }
+  } else {
+    pages.add(1);
+    pages.add(safeTotal);
+    pages.add(safePage);
+    pages.add(safePage - 1);
+    pages.add(safePage + 1);
+  }
+
+  const sorted = [...pages].filter((item) => item >= 1 && item <= safeTotal).sort((a, b) => a - b);
+  const items: Array<number | "ellipsis"> = [];
+
+  sorted.forEach((value, index) => {
+    const previous = sorted[index - 1];
+    if (previous && value - previous > 1) {
+      items.push("ellipsis");
+    }
+    items.push(value);
+  });
+
+  return items;
+};
+
+function PaginationControls({
+  label,
+  page,
+  totalPages,
+  onPageChange,
+}: Readonly<{
+  label: string;
+  page: number;
+  totalPages: number;
+  onPageChange: (nextPage: number) => void;
+}>) {
+  if (totalPages <= 1) {
+    return null;
+  }
+
+  const items = buildPageItems(page, totalPages);
+
+  return (
+    <nav
+      className="mt-6 flex flex-wrap items-center justify-center gap-2 text-xs text-slate-300 sm:text-sm"
+      aria-label={`${label} pagination`}
+    >
+      <button
+        type="button"
+        onClick={() => onPageChange(Math.max(1, page - 1))}
+        disabled={page <= 1}
+        className="rounded-full border border-white/15 px-3 py-1.5 text-xs font-semibold text-white/80 transition hover:border-amber-300/60 hover:text-white disabled:cursor-not-allowed disabled:border-white/10 disabled:text-white/30"
+      >
+        Prev
+      </button>
+
+      {items.map((item, index) =>
+        item === "ellipsis" ? (
+          <span key={`ellipsis-${index}`} className="px-2 text-white/40">
+            ...
+          </span>
+        ) : (
+          <button
+            key={item}
+            type="button"
+            onClick={() => onPageChange(item)}
+            aria-current={item === page ? "page" : undefined}
+            className={`min-w-[32px] rounded-full border px-3 py-1.5 text-xs font-semibold transition sm:text-sm ${
+              item === page
+                ? "border-amber-300/80 bg-amber-400/20 text-amber-200"
+                : "border-white/15 text-white/70 hover:border-amber-300/60 hover:text-white"
+            }`}
+          >
+            {item}
+          </button>
+        )
+      )}
+
+      <button
+        type="button"
+        onClick={() => onPageChange(Math.min(totalPages, page + 1))}
+        disabled={page >= totalPages}
+        className="rounded-full border border-white/15 px-3 py-1.5 text-xs font-semibold text-white/80 transition hover:border-amber-300/60 hover:text-white disabled:cursor-not-allowed disabled:border-white/10 disabled:text-white/30"
+      >
+        Next
+      </button>
+
+      <span className="ml-2 text-[11px] uppercase tracking-[0.2em] text-white/40">
+        Page {page} of {totalPages}
+      </span>
+    </nav>
+  );
+}
 
 function SectionEmptyState({
   loading,
@@ -55,12 +158,15 @@ export function DealsDashboard() {
   const [filteredDeals, setFilteredDeals] = useState<Deal[]>([]);
   const [loadingFiltered, setLoadingFiltered] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [filteredPage, setFilteredPage] = useState(1);
+  const [filteredPagination, setFilteredPagination] = useState<DealsPagination | null>(null);
 
   const [isExpanded, setIsExpanded] = useState(false);
   const [brandsList, setBrandsList] = useState<{ name: string }[]>([]);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
 
-  const fetchFilteredDeals = useCallback(async () => {
+  const fetchFilteredDeals = useCallback(async (pageOverride?: number) => {
+    const pageToUse = pageOverride ?? filteredPage;
     setLoadingFiltered(true);
     setErrorMessage(null);
 
@@ -69,6 +175,8 @@ export function DealsDashboard() {
         maxPrice,
         query,
         brand,
+        page: String(pageToUse),
+        limit: String(FILTERED_DEALS_PAGE_SIZE),
       });
 
       const response = await fetch(`${apiBaseUrl}/api/deals/filtered?${queryParam}`);
@@ -80,6 +188,8 @@ export function DealsDashboard() {
       console.log("Fetched deals:", payload.data);
       const fetchedDeals = payload.data ?? [];
       setFilteredDeals(fetchedDeals);
+      setFilteredPagination(payload.pagination ?? null);
+      setFilteredPage(pageToUse);
 
       if (query.trim()) {
         fetch(`${apiBaseUrl}/api/analytics/event`, {
@@ -97,10 +207,11 @@ export function DealsDashboard() {
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Unexpected error.");
       setFilteredDeals([]);
+      setFilteredPagination(null);
     } finally {
       setLoadingFiltered(false);
     }
-  }, [brand, maxPrice, query]);
+  }, [brand, filteredPage, maxPrice, query]);
 
   const fetchBrands = useCallback(async () => {
     try {
@@ -119,7 +230,7 @@ export function DealsDashboard() {
   }, []);
 
   useEffect(() => {
-    void fetchFilteredDeals();
+    void fetchFilteredDeals(1);
   }, []);
 
   useEffect(() => {
@@ -128,8 +239,16 @@ export function DealsDashboard() {
 
   const onFilterSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    void fetchFilteredDeals();
+    void fetchFilteredDeals(1);
   };
+
+  const filteredTotalPages = Math.max(1, filteredPagination?.totalPages ?? 1);
+
+  useEffect(() => {
+    if (filteredPagination && filteredPage > filteredTotalPages) {
+      void fetchFilteredDeals(filteredTotalPages);
+    }
+  }, [filteredPage, filteredPagination, filteredTotalPages, fetchFilteredDeals]);
 
 
 
@@ -291,6 +410,16 @@ export function DealsDashboard() {
               <DealCard key={deal.externalId} deal={deal} onOpen={() => setSelectedDeal(deal)} />
             ))}
           </div>
+          {filteredPagination && filteredPagination.totalPages > 1 ? (
+            <PaginationControls
+              label="Filtered deals"
+              page={filteredPagination.page ?? filteredPage}
+              totalPages={filteredTotalPages}
+              onPageChange={(nextPage) => {
+                void fetchFilteredDeals(nextPage);
+              }}
+            />
+          ) : null}
         </section>
       </div>
       <DealModal deal={selectedDeal} onClose={() => setSelectedDeal(null)} />

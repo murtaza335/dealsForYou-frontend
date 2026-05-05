@@ -30,7 +30,17 @@ export interface Deal {
 export interface ApiResponse {
   success: boolean;
   data: Deal[];
+  pagination?: DealsPagination;
   message?: string;
+}
+
+export interface DealsPagination {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
 }
 
 export const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3000";
