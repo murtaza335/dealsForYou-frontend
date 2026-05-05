@@ -12,22 +12,21 @@ type DealModalProps = {
 };
 
 export function DealModal({ deal, onClose }: DealModalProps) {
-  const { getToken, userId } = useAuth();
+  const { userId } = useAuth();
 
   const handleGetDealClick = async () => {
     if (!deal || !deal.baseUrl || !apiBaseUrl) return;
 
     try {
-      const token = await getToken();
       await fetch(`${apiBaseUrl}/api/analytics/event`, {
         method: "POST",
-        headers: withBearerToken(token, {
+        headers:{
           "Content-Type": "application/json",
-        }),
+        },
         body: JSON.stringify({
-          eventType: "CLICK_EXTERNAL_LINK",
-          userId: userId,
-          dealId: deal.id,
+          eventType: "EXTERNAL_LINK",
+          ...(userId && { userId }),
+          dealId: deal.dealId,
           brandSlug: deal.brandSlug,
         }),
       });

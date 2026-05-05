@@ -1,8 +1,8 @@
 "use client";
 
 import { useAuth, useUser } from "@clerk/nextjs";
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { DealCard } from "@/components/deal-card";
 import { DealModal } from "@/components/deal-modal";
 import {
   apiBaseUrl,
@@ -10,28 +10,13 @@ import {
   type ApiResponse,
   type Deal,
 } from "@/lib/deals";
+import { HomeSlider } from "@/components/home_slider";
+import { RecommendDealsSlider } from "@/components/recommend-deals-slider";
+import { HotDealsSlider } from "@/components/hot-deals-slider";
+import { JoinAsBrandSection } from "./join-as-brand-section";
+import { LoginToPersonalizeSection } from "./login-to-personalize-section";
 
-function SectionEmptyState({
-  loading,
-  items,
-  emptyText,
-}: Readonly<{
-  loading: boolean;
-  items: Deal[];
-  emptyText: string;
-}>) {
-  if (loading) {
-    return <p className="mt-4 text-sm text-slate-500">Loading...</p>;
-  }
-
-  if (items.length === 0) {
-    return <p className="mt-4 text-sm text-slate-500">{emptyText}</p>;
-  }
-
-  return null;
-}
-
-
+const RECOMMENDED_DEALS_LIMIT = 12;
 
 export function HomeDashboard() {
   const { user } = useUser();
@@ -59,8 +44,9 @@ export function HomeDashboard() {
 
     try {
       const token = await getToken();
+      console.log(token)
       const response = await fetch(
-        `${apiBaseUrl}/api/deals/recommended?userId=${encodeURIComponent(userId)}&limit=6`,
+        `${apiBaseUrl}/api/deals/recommended?userId=${encodeURIComponent(userId)}&limit=${RECOMMENDED_DEALS_LIMIT}`,
         {
           headers: withBearerToken(token),
         }
@@ -85,10 +71,7 @@ export function HomeDashboard() {
     setErrorMessage(null);
 
     try {
-      const token = await getToken();
-      const response = await fetch(`${apiBaseUrl}/api/analytics/trending/deals`, {
-        headers: withBearerToken(token),
-      });
+      const response = await fetch(`${apiBaseUrl}/api/analytics/trending/deals`);
       if (!response.ok) {
         throw new Error("Could not fetch top deals.");
       }
@@ -102,12 +85,9 @@ export function HomeDashboard() {
     } finally {
       setLoadingTop(false);
     }
-  }, [getToken]);
+  }, []);
 
   useEffect(() => {
-    if (!isSignedIn) {
-      return;
-    }
 
     const timer = setTimeout(() => {
       void fetchRecommendedDeals();
@@ -115,56 +95,76 @@ export function HomeDashboard() {
     }, 0);
 
     return () => clearTimeout(timer);
-  }, [isSignedIn, fetchRecommendedDeals, fetchTopDeals]);
+  }, [fetchRecommendedDeals, fetchTopDeals]);
+
+  const images = ['https://res.cloudinary.com/durv0rf9u/image/upload/v1777748574/banner1_ptoawz.png', 'https://res.cloudinary.com/durv0rf9u/image/upload/v1777748573/banner2_grh4tn.png', 'https://res.cloudinary.com/durv0rf9u/image/upload/v1777749246/banner3_wjdqp2.png']
 
 
 
   return (
-    <div className="relative z-10 px-4 pb-6 pt-25 sm:px-6 lg:px-8">
-        <div className="mx-auto w-full max-w-7xl">
+    <>
+      <div>
+        <HomeSlider images={images} />
+      </div>
+      <div className="relative z-10 w-full px-4 pb-8 pt-24 sm:px-6 sm:pb-10 sm:pt-28 lg:px-8 lg:pt-32">
+        <div className="w-full max-w-none space-y-12 lg:space-y-16">
 
-        {errorMessage ? (
-            <p className="mt-6 rounded-2xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {errorMessage}
-            </p>
-        ) : null}
 
-        <section className="mt-6">
-            <div className="flex items-center justify-between gap-4">
-            <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-yellow-500">Recommended</p>
-                <h2 className="mt-2 font-display text-2xl font-bold text-yellow-500">Deals matched to your activity</h2>
-            </div>
-            {!isSignedIn ? (
-                <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800">
-                Sign in required
+
+          <HotDealsSlider
+            loading={loadingTop}
+            deals={topDeals}
+            onDealOpen={setSelectedDeal}
+          />
+
+          <div className="flex justify-center pt-2">
+            <Link
+              href="/deals"
+              className="group inline-flex items-center gap-2 rounded-full border border-amber-400/30 bg-gradient-to-r from-amber-400 via-amber-500 to-orange-500 px-4 py-2.5 text-xs font-semibold text-black shadow-lg shadow-amber-500/20 transition duration-300 hover:-translate-y-0.5 hover:shadow-amber-500/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 sm:px-6 sm:py-3 sm:text-sm"
+              aria-label="Dive deeper into deals"
+            >
+              {/* Pizza icon */}
+              <span className="relative inline-flex items-center justify-center">
+                <span className="text-base transition-transform duration-500 group-hover:-translate-y-1 group-hover:rotate-180">
+                  🍕
                 </span>
-            ) : null}
-            </div>
+                {/* subtle glow pulse */}
+                <span className="absolute inset-0 rounded-full bg-amber-300/30 blur-md opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+              </span>
 
-            <SectionEmptyState loading={loadingRecommended} items={recommendedDeals} emptyText="No recommendations yet." />
-            <div className="mt-8 grid gap-16 sm:grid-cols-2 xl:grid-cols-3">
-            {recommendedDeals.map((deal) => (
-                <DealCard key={deal.externalId} deal={deal} onOpen={() => setSelectedDeal(deal)} />
-            ))}
-            </div>
-        </section>
+              <span>Explore All Deals</span>
 
-        <section className="mt-6">
-            <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-yellow-500">Top deals</p>
-            <h2 className="mt-2 font-display text-2xl font-bold text-yellow-500">Popular picks right now</h2>
-            </div>
+              <svg
+                className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1"
+                viewBox="0 0 20 20"
+                fill="none"
+                aria-hidden="true"
+              >
+                <path
+                  d="M7.5 5.5L12 10l-4.5 4.5"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </Link>
+          </div>
 
-            <SectionEmptyState loading={loadingTop} items={topDeals} emptyText="No top deals available." />
-            <div className="mt-8 grid gap-16 sm:grid-cols-2 xl:grid-cols-3">
-            {topDeals.map((deal) => (
-                <DealCard key={deal.externalId} deal={deal} onOpen={() => setSelectedDeal(deal)} />
-            ))}
-            </div>
-        </section>
+          {isSignedIn && <RecommendDealsSlider
+            isSignedIn={isSignedIn ?? false}
+            loading={loadingRecommended}
+            deals={recommendedDeals}
+            onDealOpen={setSelectedDeal}
+          />}
+
+          {!isSignedIn && <LoginToPersonalizeSection />}
+
+          <JoinAsBrandSection></JoinAsBrandSection>
+
         </div>
         <DealModal deal={selectedDeal} onClose={() => setSelectedDeal(null)} />
-    </div>
+      </div>
+    </>
   );
 }

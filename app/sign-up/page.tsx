@@ -241,8 +241,20 @@ export default function Page() {
             </form>
           ) : (
             <>
-              <button type="button" onClick={() => void signUpWithGoogle().catch((error) => setMessage(error instanceof Error ? error.message : "Google sign up failed."))} className="mt-7 w-full rounded-full bg-white px-5 py-3 text-sm font-bold text-slate-950 transition hover:bg-slate-200">
-                Continue with Google
+              <button
+                type="button"
+                onClick={() => void signUpWithGoogle().catch((error) => setMessage(error instanceof Error ? error.message : "Google sign up failed."))}
+                className="mt-7 w-full rounded-full bg-white px-5 py-3 text-sm font-bold text-slate-950 transition hover:bg-slate-200 flex items-center justify-center"
+              >
+                <span className="mr-3 flex h-5 w-5 items-center justify-center">
+                  <svg aria-hidden="true" focusable="false" width="20" height="20" viewBox="0 0 533.5 544.3" xmlns="http://www.w3.org/2000/svg">
+                    <path fill="#4285F4" d="M533.5 278.4c0-18.5-1.5-37.1-4.7-55.1H272v104.4h146.9c-6.3 34.1-25.4 62.9-54.2 82.1v68.1h87.5c51.3-47.2 80.3-116.9 80.3-199.5z"/>
+                    <path fill="#34A853" d="M272 544.3c73.7 0 135.6-24.3 180.8-66.2l-87.5-68.1c-24.4 16.4-55.7 26-93.3 26-71.7 0-132.5-48.3-154.2-113.2H27.4v70.9C72.6 488.6 165.8 544.3 272 544.3z"/>
+                    <path fill="#FBBC05" d="M117.8 325.7c-10.3-30.6-10.3-63.6 0-94.2V160.6H27.4c-39.2 76.2-39.2 166.1 0 242.3l90.4-77.2z"/>
+                    <path fill="#EA4335" d="M272 108.6c39.9-.6 78.3 14.6 107.4 41.9l80.4-80.4C407.8 25.7 345.9 0 272 0 165.8 0 72.6 55.7 27.4 160.6l90.4 70.9C139.5 156.9 200.3 108.6 272 108.6z"/>
+                  </svg>
+                </span>
+                <span>Continue with Google</span>
               </button>
               <div className="mt-6 grid gap-4 sm:grid-cols-2">
                 <label className={labelClass}>

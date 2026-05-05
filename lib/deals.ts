@@ -19,6 +19,7 @@ export interface Deal {
   isHot?: boolean;
   imgUrl: string;
   brandSlug: string;
+  brandLogoUrl?: string;
   baseUrl?: string;
   viewsCount?: number;
   sourceType?: "SCRAPER" | "MANUAL";

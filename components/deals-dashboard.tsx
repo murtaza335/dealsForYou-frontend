@@ -5,6 +5,7 @@ import { UserButton, SignUpButton, useAuth, useUser } from "@clerk/nextjs";
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { DealCard } from "@/components/deal-card";
 import { DealModal } from "@/components/deal-modal";
+import { DealSkeleton } from "@/components/deal-skeleton";
 import {
   apiBaseUrl,
   buildQuery,
@@ -14,6 +15,7 @@ import {
   type Deal,
 } from "@/lib/deals";
 import { motion, AnimatePresence } from "framer-motion";
+import { HomeSlider } from "./home_slider";
 
 function SectionEmptyState({
   loading,
@@ -25,7 +27,13 @@ function SectionEmptyState({
   emptyText: string;
 }>) {
   if (loading) {
-    return <p className="mt-4 text-sm text-slate-500">Loading...</p>;
+    return (
+      <div className="mt-8 grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4">
+        {Array.from({ length: 8 }).map((_, index) => (
+          <DealSkeleton key={index} />
+        ))}
+      </div>
+    );
   }
 
   if (items.length === 0) {
@@ -62,11 +70,8 @@ export function DealsDashboard() {
         query,
         brand,
       });
-      const token = await getToken();
 
-      const response = await fetch(`${apiBaseUrl}/api/deals/filtered?${queryParam}`, {
-        headers: withBearerToken(token),
-      });
+      const response = await fetch(`${apiBaseUrl}/api/deals/filtered?${queryParam}`);
       if (!response.ok) {
         throw new Error("Could not fetch filtered deals.");
       }
@@ -76,13 +81,13 @@ export function DealsDashboard() {
       const fetchedDeals = payload.data ?? [];
       setFilteredDeals(fetchedDeals);
 
-      if (query.trim() && userId) {
+      if (query.trim()) {
         fetch(`${apiBaseUrl}/api/analytics/event`, {
           method: "POST",
-          headers: withBearerToken(token, { "Content-Type": "application/json" }),
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             eventType: "SEARCH_QUERY",
-            userId: userId,
+            ...(userId && { userId }),
             dealId: fetchedDeals.map((d: Deal) => d.dealId).join(","),
             brandSlug: fetchedDeals.map((d: Deal) => d.brandSlug).join(","),
             queryText: query,
@@ -95,14 +100,12 @@ export function DealsDashboard() {
     } finally {
       setLoadingFiltered(false);
     }
-  }, [brand, maxPrice, query, getToken]);
+  }, [brand, maxPrice, query]);
 
   const fetchBrands = useCallback(async () => {
     try {
-      const token = await getToken();
-      const response = await fetch(`${apiBaseUrl}/api/deals/filters/brands`, {
-        headers: withBearerToken(token),
-      });
+
+      const response = await fetch(`${apiBaseUrl}/api/deals/filters/brands`);
       if (!response.ok) {
         throw new Error("Could not fetch brands.");
       }
@@ -113,19 +116,15 @@ export function DealsDashboard() {
     } catch (error) {
       console.error("Error fetching brands:", error);
     }
-  }, [getToken]);
+  }, []);
 
   useEffect(() => {
-    if (!isSignedIn) return;
     void fetchFilteredDeals();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSignedIn]);
+  }, []);
 
   useEffect(() => {
-    if (!isSignedIn) return;
     void fetchBrands();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSignedIn]);
+  }, []);
 
   const onFilterSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -140,7 +139,9 @@ export function DealsDashboard() {
 
 
   return (
-    <div className="relative z-10 px-6 pb-6 pt-25 sm:px-8 md:px-12 lg:px-16 xl:px-20">
+    <>
+    
+    <div className="relative z-10 min-h-screen px-6 pb-6 pt-25 sm:px-8 md:px-12 lg:px-16 xl:px-20">
       <div className="mx-auto w-full max-w-7xl">
 
         {errorMessage ? (
@@ -294,5 +295,6 @@ export function DealsDashboard() {
       </div>
       <DealModal deal={selectedDeal} onClose={() => setSelectedDeal(null)} />
     </div>
+    </>
   );
 }
