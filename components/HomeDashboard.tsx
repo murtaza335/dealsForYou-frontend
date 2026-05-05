@@ -305,14 +305,14 @@ export function HomeDashboard() {
                 deals={recommendedPageDeals}
                 onDealOpen={setSelectedDeal}
               />
-              {recommendedTotalPages > 1 && !loadingRecommended && (
+              {/* {recommendedTotalPages > 1 && !loadingRecommended && (
                 <PaginationControls
                   label="Recommended deals"
                   page={recommendedPage}
                   totalPages={recommendedTotalPages}
                   onPageChange={setRecommendedPage}
                 />
-              )}
+              )} */}
             </>
           )}
 
