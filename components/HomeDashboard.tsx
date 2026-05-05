@@ -253,14 +253,14 @@ export function HomeDashboard() {
             onDealOpen={setSelectedDeal}
           />
 
-          {topDealsPagination && topDealsPagination.totalPages > 1 && (
+          {/* {topDealsPagination && topDealsPagination.totalPages > 1 && (
             <PaginationControls
               label="Top deals"
               page={topDealsPage}
               totalPages={topDealsTotalPages}
               onPageChange={setTopDealsPage}
             />
-          )}
+          )} */}
 
           <div className="flex justify-center pt-2">
             <Link
