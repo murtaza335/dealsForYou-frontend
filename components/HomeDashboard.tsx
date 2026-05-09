@@ -138,7 +138,25 @@ export function HomeDashboard() {
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
   const [recommendedPage, setRecommendedPage] = useState(1);
   const [topDealsPage, setTopDealsPage] = useState(1);
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
 
+  const fetchFavorites = useCallback(async () => {
+    if (!isSignedIn || !userId) return;
+    try {
+      const token = await getToken();
+      const response = await fetch(`${apiBaseUrl}/api/analytics/favourites`, {
+        headers: withBearerToken(token),
+      });
+      if (response.ok) {
+        const payload = await response.json();
+        const favs = payload.data ?? [];
+        const ids = new Set<string>(favs.map((f: any) => f.dealExternalId));
+        setFavoriteIds(ids);
+      }
+    } catch (e) {
+      console.error("Failed to fetch favorites", e);
+    }
+  }, [isSignedIn, userId, getToken]);
 
   const fetchRecommendedDeals = useCallback(async () => {
     if (!userId) {
@@ -209,6 +227,10 @@ export function HomeDashboard() {
     void fetchTopDeals();
   }, [fetchTopDeals]);
 
+  useEffect(() => {
+    void fetchFavorites();
+  }, [fetchFavorites]);
+
   const recommendedTotalPages = Math.max(
     1,
     Math.ceil(recommendedDeals.length / RECOMMENDED_DEALS_PAGE_SIZE)
@@ -249,7 +271,7 @@ export function HomeDashboard() {
           <HotDealsSlider
             key={`top-${topDealsPage}`}
             loading={loadingTop}
-            deals={topDeals}
+            deals={topDeals.map((d) => ({ ...d, isFavorited: favoriteIds.has(d.externalId) }))}
             onDealOpen={setSelectedDeal}
           />
 
@@ -302,7 +324,7 @@ export function HomeDashboard() {
                 key={`recommended-${recommendedPage}`}
                 isSignedIn={isSignedIn ?? false}
                 loading={loadingRecommended}
-                deals={recommendedPageDeals}
+                deals={recommendedPageDeals.map((d) => ({ ...d, isFavorited: favoriteIds.has(d.externalId) }))}
                 onDealOpen={setSelectedDeal}
               />
               {/* {recommendedTotalPages > 1 && !loadingRecommended && (

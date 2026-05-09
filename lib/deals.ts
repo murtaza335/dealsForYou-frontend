@@ -23,6 +23,7 @@ export interface Deal {
   baseUrl?: string;
   viewsCount?: number;
   sourceType?: "SCRAPER" | "MANUAL";
+  isFavorited?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }

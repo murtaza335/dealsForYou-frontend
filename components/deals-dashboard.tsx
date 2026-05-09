@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { UserButton, SignUpButton, useAuth, useUser } from "@clerk/nextjs";
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { DealCard } from "@/components/deal-card";
 import { DealModal } from "@/components/deal-modal";
@@ -149,6 +150,7 @@ function SectionEmptyState({
 export function DealsDashboard() {
   const { user } = useUser();
   const { isSignedIn, getToken } = useAuth();
+  const searchParams = useSearchParams();
   const userId = user?.id;
 
   const [brand, setBrand] = useState("");
@@ -161,7 +163,32 @@ export function DealsDashboard() {
   const [filteredPage, setFilteredPage] = useState(1);
   const [filteredPagination, setFilteredPagination] = useState<DealsPagination | null>(null);
 
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(searchParams.get("search") === "true");
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+
+  const fetchFavorites = useCallback(async () => {
+    if (!isSignedIn || !userId) return;
+    try {
+      const token = await getToken();
+      const response = await fetch(`${apiBaseUrl}/api/analytics/favourites`, {
+        headers: withBearerToken(token),
+      });
+      if (response.ok) {
+        const payload = await response.json();
+        const favs = payload.data ?? [];
+        const ids = new Set<string>(favs.map((f: any) => f.dealExternalId));
+        setFavoriteIds(ids);
+      }
+    } catch (e) {
+      console.error("Failed to fetch favorites", e);
+    }
+  }, [isSignedIn, userId, getToken]);
+
+  useEffect(() => {
+    if (searchParams.get("search") === "true") {
+      setIsExpanded(true);
+    }
+  }, [searchParams]);
   const [brandsList, setBrandsList] = useState<{ name: string }[]>([]);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
 
@@ -236,6 +263,10 @@ export function DealsDashboard() {
   useEffect(() => {
     void fetchBrands();
   }, []);
+
+  useEffect(() => {
+    void fetchFavorites();
+  }, [fetchFavorites]);
 
   const onFilterSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -407,7 +438,11 @@ export function DealsDashboard() {
           <SectionEmptyState loading={loadingFiltered} items={filteredDeals} emptyText="No deals match this filter." />
           <div className="mt-8 grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4">
             {filteredDeals.map((deal) => (
-              <DealCard key={deal.externalId} deal={deal} onOpen={() => setSelectedDeal(deal)} />
+              <DealCard 
+                key={deal.externalId} 
+                deal={{...deal, isFavorited: favoriteIds.has(deal.externalId)}} 
+                onOpen={() => setSelectedDeal(deal)} 
+              />
             ))}
           </div>
           {filteredPagination && filteredPagination.totalPages > 1 ? (

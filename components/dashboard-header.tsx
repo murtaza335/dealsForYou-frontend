@@ -7,10 +7,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
 import { DealsLogo } from "@/components/deals-logo";
 
-const tabs: { href: string; label: string; key: "home" | "deals" | "about" }[] = [
+const tabs: { href: string; label: string; key: "home" | "deals" | "favorites" }[] = [
   { href: "/", label: "Home", key: "home" },
   { href: "/deals", label: "Deals", key: "deals" },
-  { href: "/about", label: "About", key: "about" },
+  { href: "/favorites", label: "Favorites", key: "favorites" },
 ];
 
 export function DashboardHeader() {
@@ -19,7 +19,7 @@ export function DashboardHeader() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const activeTab =
-    pathname === "/" ? "home" : pathname.startsWith("/deals") ? "deals" : "about";
+    pathname === "/" ? "home" : pathname.startsWith("/deals") ? "deals" : "favorites";
 
   const headerMask = isMenuOpen
     ? "none"
@@ -57,22 +57,24 @@ export function DashboardHeader() {
           </Link>
         ))}
 
-        <button aria-label="Search" className="ml-2 text-white transition hover:text-red-400">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="22"
-            height="22"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <circle cx="11" cy="11" r="8" />
-            <path d="m21 21-4.3-4.3" />
-          </svg>
-        </button>
+        <Link href="/deals?search=true">
+          <button aria-label="Search" className="ml-2 text-white transition hover:text-red-400">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.3-4.3" />
+            </svg>
+          </button>
+        </Link>
       </nav>
 
       <div className="absolute left-4 top-1/2 flex -translate-y-1/2 items-center sm:left-7">
@@ -145,26 +147,28 @@ export function DashboardHeader() {
                 ))}
               </div>
 
-              <button
-                aria-label="Search"
-                className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-white/15 py-2 text-sm font-semibold text-white/90 transition hover:border-white/30"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
+              <Link href="/deals?search=true" className="w-full">
+                <button
+                  aria-label="Search"
+                  className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-white/15 py-2 text-sm font-semibold text-white/90 transition hover:border-white/30"
                 >
-                  <circle cx="11" cy="11" r="8" />
-                  <path d="m21 21-4.3-4.3" />
-                </svg>
-                Search
-              </button>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <circle cx="11" cy="11" r="8" />
+                    <path d="m21 21-4.3-4.3" />
+                  </svg>
+                  Search
+                </button>
+              </Link>
             </div>
           </motion.div>
         ) : null}

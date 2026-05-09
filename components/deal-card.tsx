@@ -1,21 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ArrowUpRight } from "lucide-react";
-import { formatPrice, type Deal } from "@/lib/deals";
-import { apiBaseUrl } from "@/lib/deals";
+import { formatPrice, apiBaseUrl, withBearerToken, type Deal } from "@/lib/deals";
 import { useAuth } from "@clerk/nextjs";
-import { addToFavorites, removeFromFavorites } from "@/lib/favorites";
 
 type DealCardProps = {
   deal: Deal;
   onOpen: () => void;
+  onFavoriteToggle?: (isFavorited: boolean) => void;
 };
 
-export function DealCard({ deal, onOpen }: DealCardProps) {
+export function DealCard({ deal, onOpen, onFavoriteToggle }: DealCardProps) {
   const { getToken, userId } = useAuth();
-  const [isFavorited, setIsFavorited] = useState(false);
+  const [isFavorited, setIsFavorited] = useState(deal.isFavorited ?? false);
   const [isLoadingFav, setIsLoadingFav] = useState(false);
+
+  useEffect(() => {
+    setIsFavorited(deal.isFavorited ?? false);
+  }, [deal.isFavorited]);
 
   const handleDealClick = async (dealId: string) => {
     onOpen();
@@ -46,23 +49,49 @@ export function DealCard({ deal, onOpen }: DealCardProps) {
     
     if (isLoadingFav) return;
 
+    const previousState = isFavorited;
+    const newState = !isFavorited;
+
+    // Optimistic Update
+    setIsFavorited(newState);
+    onFavoriteToggle?.(newState);
     setIsLoadingFav(true);
+
     try {
       const token = await getToken();
       
-      if (isFavorited) {
-        const success = await removeFromFavorites(deal.dealId, userId, token);
-        if (success) {
-          setIsFavorited(false);
+      if (previousState) {
+        const response = await fetch(`${apiBaseUrl}/api/analytics/favourites`, {
+          method: "DELETE",
+          headers: withBearerToken(token, { "Content-Type": "application/json" }),
+          body: JSON.stringify({ 
+            dealExternalId: deal.externalId, 
+            brandSlug: deal.brandSlug,
+            userId 
+          }),
+        });
+        if (!response.ok) {
+          throw new Error("Failed to remove favorite");
         }
       } else {
-        const success = await addToFavorites(deal.dealId, userId, token);
-        if (success) {
-          setIsFavorited(true);
+        const response = await fetch(`${apiBaseUrl}/api/analytics/favourites`, {
+          method: "POST",
+          headers: withBearerToken(token, { "Content-Type": "application/json" }),
+          body: JSON.stringify({ 
+            dealExternalId: deal.externalId, 
+            brandSlug: deal.brandSlug,
+            userId 
+          }),
+        });
+        if (!response.ok) {
+          throw new Error("Failed to add favorite");
         }
       }
     } catch (error) {
       console.error("Failed to toggle favorite:", error);
+      // Revert Optimistic Update
+      setIsFavorited(previousState);
+      onFavoriteToggle?.(previousState);
     } finally {
       setIsLoadingFav(false);
     }
@@ -79,9 +108,16 @@ export function DealCard({ deal, onOpen }: DealCardProps) {
       "shadow-lg transition-all duration-500 ease-[cubic-bezier(.22,.68,0,1.2)]",
       "hover:-translate-y-1.5 hover:shadow-[0_20px_40px_rgba(0,0,0,0.8),0_0_0_1px_rgba(255,255,255,0.1)]"
     )}>
-      <button
-        type="button"
+      <div
+        role="button"
+        tabIndex={0}
         onClick={() => void handleDealClick(deal.dealId)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            void handleDealClick(deal.dealId);
+          }
+        }}
         className="flex h-full w-full flex-col text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
       >
         {/* Image — hero focus, ~72% */}
@@ -172,7 +208,7 @@ export function DealCard({ deal, onOpen }: DealCardProps) {
             </div>
           </div>
         </div>
-      </button>
+      </div>
     </article>
   );
 }
