@@ -448,6 +448,7 @@ export default function AppAdminApprovalsPage() {
     const { signOut } = useClerk();
     const { isLoaded, isSignedIn, getToken } = useAuth();
     const [activeTab, setActiveTab] = useState<AdminTab>("overview");
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [brandFilter, setBrandFilter] = useState<BrandFilter>("pending");
     const [overview, setOverview] = useState<AppAdminOverview | null>(null);
     const [allBrands, setAllBrands] = useState<AdminBrand[]>([]);
@@ -665,20 +666,56 @@ export default function AppAdminApprovalsPage() {
     return (
         <main className="min-h-screen bg-[#f6f6f6] text-slate-900">
             <ToastStack toasts={toasts} onDismiss={dismiss} />
-            <div className="mx-auto flex min-h-screen max-w-7xl gap-6 px-4 py-6">
-                <aside className="hidden w-64 flex-col justify-between rounded-3xl border border-slate-200 bg-white p-6 shadow-sm lg:flex">
+            <button
+                type="button"
+                onClick={() => setIsSidebarOpen((prev) => !prev)}
+                aria-expanded={isSidebarOpen}
+                aria-controls="app-admin-sidebar"
+                aria-label={isSidebarOpen ? "Close navigation" : "Open navigation"}
+                className="fixed left-4 top-4 z-40 flex items-center justify-center rounded-full border border-slate-200 bg-white/95 p-3 text-slate-700 shadow-lg backdrop-blur transition hover:border-red-200 hover:text-red-700 lg:hidden"
+            >
+                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-slate-50">
+                    <svg
+                        aria-hidden="true"
+                        viewBox="0 0 24 24"
+                        className="h-4 w-4"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                    >
+                        <line x1="4" y1="7" x2="20" y2="7" />
+                        <line x1="4" y1="12" x2="20" y2="12" />
+                        <line x1="4" y1="17" x2="20" y2="17" />
+                    </svg>
+                </span>
+            </button>
+            <div className="mx-auto flex min-h-screen max-w-7xl flex-col gap-4 px-4 py-4 lg:flex-row lg:gap-6 lg:px-6 lg:py-6">
+                {isSidebarOpen ? (
+                    <button
+                        type="button"
+                        aria-label="Close navigation"
+                        onClick={() => setIsSidebarOpen(false)}
+                        className="fixed inset-0 z-20 bg-black/30 lg:hidden"
+                    />
+                ) : null}
+                <aside
+                    id="app-admin-sidebar"
+                    className={`fixed inset-y-0 left-0 z-30 w-72 max-w-[85vw] -translate-x-full border-r border-slate-200 bg-white p-5 shadow-xl transition-transform duration-200 lg:static lg:z-auto lg:translate-x-0 lg:w-64 lg:max-w-none lg:rounded-3xl lg:border lg:p-6 lg:shadow-sm ${
+                        isSidebarOpen ? "translate-x-0" : ""
+                    }`}
+                >
                     <div className="space-y-6">
-                        <div>
-                            <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-slate-400">App admin</p>
-                            <h2 className="mt-2 text-lg font-semibold text-slate-900">Control suite</h2>
-                            <p className="mt-1 text-xs text-slate-500">Full oversight for approvals, users, and deals.</p>
-                        </div>
 
-                        <nav className="space-y-2">
+                        <nav className="grid gap-2">
                             {tabs.map((tab) => (
                                 <button
                                     key={tab.id}
-                                    onClick={() => setActiveTab(tab.id)}
+                                    onClick={() => {
+                                        setActiveTab(tab.id);
+                                        setIsSidebarOpen(false);
+                                    }}
                                     className={`flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left text-xs font-semibold transition ${
                                         activeTab === tab.id
                                             ? "border-red-200 bg-red-50 text-red-700"
@@ -692,27 +729,29 @@ export default function AppAdminApprovalsPage() {
                         </nav>
                     </div>
 
-                    <div className="rounded-2xl border border-yellow-200 bg-yellow-50 p-3">
+                    {/* <div className="rounded-2xl border border-yellow-200 bg-yellow-50 p-3">
                         <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-yellow-700">System status</p>
                         <p className="mt-1 text-xs text-slate-600">Approvals and moderation actions are live.</p>
-                    </div>
+                    </div> */}
                 </aside>
 
                 <section className="flex-1 space-y-4">
-                    <header className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-                        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                    <header className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 lg:p-6">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                             <div>
                                 <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400">App admin</p>
-                                <h1 className="mt-1 text-2xl font-semibold text-slate-900">Admin control center</h1>
+                                <h1 className="mt-1 text-xl font-semibold text-slate-900 sm:text-2xl">Admin control center</h1>
                                 <p className="mt-1 max-w-3xl text-xs text-slate-500">Review brands, users, and deals with precision and clear auditability.</p>
                             </div>
-                            <button
-                                type="button"
-                                onClick={() => void signOut()}
-                                className="rounded-md border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-100"
-                            >
-                                Log out
-                            </button>
+                            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+                                <button
+                                    type="button"
+                                    onClick={() => void signOut()}
+                                    className="w-full rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 transition hover:bg-red-100 sm:w-auto"
+                                >
+                                    Log out
+                                </button>
+                            </div>
                         </div>
                     </header>
 
