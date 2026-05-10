@@ -12,7 +12,10 @@ import {
     type Deal,
     type DomainUser,
 } from "@/lib/deals";
+import { AppAdminAnalyticsMain } from "@/app/app-admin/analytics/page";
+import { ToastStack, useToast } from "@/components/toast";
 type AdminTab = "overview" | "brands" | "users" | "deals";
+type BrandFilter = "pending" | "approved" | "rejected";
 
 type AdminBrand = BrandProfile & {
     country?: string;
@@ -46,7 +49,7 @@ const tabs: Array<{ id: AdminTab; label: string }> = [
     { id: "overview", label: "Overview" },
     { id: "brands", label: "Brand review" },
     { id: "users", label: "Users" },
-    { id: "deals", label: "Top deals" },
+    { id: "deals", label: "Analytics" },
 ];
 
 const formatList = (items?: string[]) => {
@@ -75,14 +78,14 @@ function StatusPill({
     tone?: "neutral" | "good" | "warn" | "danger";
 }) {
     const classes = {
-        neutral: "text-[#9ca3af]",
-        good: "text-emerald-400",
-        warn: "text-yellow-400",
-        danger: "text-red-400",
+        neutral: "text-slate-500",
+        good: "text-emerald-600",
+        warn: "text-yellow-600",
+        danger: "text-red-700",
     };
 
     return (
-        <span className={`inline-flex text-[10px] font-medium uppercase tracking-[0.16em] ${classes[tone]}`}>
+        <span className={`inline-flex rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] ${classes[tone]}`}>
             {children}
         </span>
     );
@@ -90,9 +93,9 @@ function StatusPill({
 
 function Detail({ label, value }: { label: string; value: string }) {
     return (
-        <div className="rounded-lg border border-[#1f1f1f] bg-[#111111] p-3">
-            <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-[#9ca3af]">{label}</p>
-            <p className="mt-1 truncate text-sm font-medium text-[#e5e5e5]">{value}</p>
+        <div className="rounded-lg border border-slate-200 bg-white p-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p>
+            <p className="mt-1 truncate text-sm font-semibold text-slate-900">{value}</p>
         </div>
     );
 }
@@ -107,15 +110,15 @@ function StatCard({
     tone?: "neutral" | "good" | "warn" | "danger";
 }) {
     const tones = {
-        neutral: "border-[#1f1f1f] bg-[#111111] text-[#e5e5e5]",
-        good: "border-[#1f1f1f] bg-[#111111] text-emerald-400",
-        warn: "border-[#1f1f1f] bg-[#111111] text-yellow-400",
-        danger: "border-[#1f1f1f] bg-[#111111] text-red-400",
+        neutral: "border-slate-200 bg-white text-slate-900",
+        good: "border-emerald-200 bg-emerald-50 text-emerald-700",
+        warn: "border-yellow-200 bg-yellow-50 text-yellow-700",
+        danger: "border-red-200 bg-red-50 text-red-700",
     };
 
     return (
-        <div className={`rounded-xl border p-3 ${tones[tone]}`}>
-            <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-[#9ca3af]">{label}</p>
+        <div className={`rounded-2xl border p-4 shadow-sm ${tones[tone]}`}>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">{label}</p>
             <p className="mt-1 text-xl font-semibold">{value}</p>
         </div>
     );
@@ -133,30 +136,30 @@ function BrandCard({
     showActions?: boolean;
 }) {
     return (
-        <article className="rounded-xl border border-[#1f1f1f] bg-[#111111] p-3">
+        <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="truncate text-base font-semibold text-[#e5e5e5]">{brand.name}</h3>
+                        <h3 className="truncate text-base font-semibold text-slate-900">{brand.name}</h3>
                         <StatusPill tone={brand.approvalStatus === "APPROVED" ? "good" : brand.approvalStatus === "REJECTED" ? "danger" : "warn"}>
                             {brand.approvalStatus}
                         </StatusPill>
                         {brand.scrapeRequested ? <StatusPill tone="warn">Scraper requested</StatusPill> : null}
                         {brand.manualDealManagementEnabled ? <StatusPill tone="good">Manual deals enabled</StatusPill> : null}
                     </div>
-                    <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-[#9ca3af]">
+                    <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500">
                         <span>{brand.contactEmail ?? "No contact email"}</span>
                         <span>{brand.contactPhone ?? "No phone"}</span>
                         <span>{formatList(brand.cities)}</span>
                         <span>{brand.country ?? "Not provided"}</span>
                     </div>
-                    <p className="mt-1 truncate text-xs text-[#9ca3af]">{brand.description ?? "No description provided."}</p>
+                    <p className="mt-1 truncate text-xs text-slate-500">{brand.description ?? "No description provided."}</p>
                 </div>
 
                 <div className="flex shrink-0 flex-wrap gap-2">
                     <Link
                         href={`/app-admin/brands/${brand.brandId}`}
-                        className="rounded-md border border-[#1f1f1f] bg-[#111111] px-3 py-1.5 text-xs font-medium text-[#e5e5e5] hover:bg-[#161616]"
+                        className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-red-200 hover:text-red-700"
                     >
                         Open brand page
                     </Link>
@@ -164,13 +167,13 @@ function BrandCard({
                         <>
                             <button
                                 onClick={() => onApprove?.(brand.brandId)}
-                                className="rounded-md border border-[#1f1f1f] bg-[#111111] px-3 py-1.5 text-xs font-medium text-red-400 hover:bg-[#161616]"
+                                className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100"
                             >
                                 Approve
                             </button>
                             <button
                                 onClick={() => onReject?.(brand.brandId)}
-                                className="rounded-md border border-[#1f1f1f] bg-[#111111] px-3 py-1.5 text-xs font-medium text-red-400 hover:bg-[#161616]"
+                                className="rounded-md border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-100"
                             >
                                 Reject
                             </button>
@@ -194,11 +197,11 @@ function BrandAdminUserCard({
     const brand = user.brand;
 
     return (
-        <article className="rounded-xl border border-[#1f1f1f] bg-[#111111] p-3">
+        <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="truncate text-base font-semibold text-[#e5e5e5]">{brand?.name ?? [user.firstName, user.lastName].filter(Boolean).join(" ") ?? user.email}</h3>
+                        <h3 className="truncate text-base font-semibold text-slate-900">{brand?.name ?? [user.firstName, user.lastName].filter(Boolean).join(" ") ?? user.email}</h3>
                         <StatusPill tone={user.isActive ? "good" : "danger"}>{user.isActive ? "Active" : "Suspended"}</StatusPill>
                         {brand ? (
                             <StatusPill tone={brand.approvalStatus === "APPROVED" ? "good" : brand.approvalStatus === "REJECTED" ? "danger" : "warn"}>
@@ -206,7 +209,7 @@ function BrandAdminUserCard({
                             </StatusPill>
                         ) : null}
                     </div>
-                    <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-[#9ca3af]">
+                    <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500">
                         <span>{[user.firstName, user.lastName].filter(Boolean).join(" ") || "Unnamed admin"}</span>
                         <span>{user.email}</span>
                         <span>{brand?.contactEmail ?? "No brand email"}</span>
@@ -219,20 +222,20 @@ function BrandAdminUserCard({
                     {brand ? (
                         <Link
                             href={`/app-admin/brands/${brand.brandId}`}
-                            className="rounded-md border border-[#1f1f1f] bg-[#111111] px-3 py-1.5 text-xs font-medium text-[#e5e5e5] hover:bg-[#161616]"
+                            className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-red-200 hover:text-red-700"
                         >
                             Open brand page
                         </Link>
                     ) : null}
                     <button
                         onClick={() => onSuspend(user.id)}
-                        className="rounded-md border border-[#1f1f1f] bg-[#111111] px-3 py-1.5 text-xs font-medium text-yellow-400 hover:bg-[#161616]"
+                        className="rounded-md border border-yellow-200 bg-yellow-50 px-3 py-1.5 text-xs font-semibold text-yellow-700 transition hover:bg-yellow-100"
                     >
                         Suspend
                     </button>
                     <button
                         onClick={() => onDelete(user.id)}
-                        className="rounded-md border border-[#1f1f1f] bg-[#111111] px-3 py-1.5 text-xs font-medium text-red-400 hover:bg-[#161616]"
+                        className="rounded-md border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-100"
                     >
                         Remove
                     </button>
@@ -244,19 +247,19 @@ function BrandAdminUserCard({
 
 function UserCard({ user, onDelete }: { user: DomainUser; onDelete: (userId: string) => void }) {
     return (
-        <article className="rounded-xl border border-[#1f1f1f] bg-[#111111] p-3">
+        <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="flex items-center justify-between gap-3">
                 <div>
                     <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="truncate text-base font-semibold text-[#e5e5e5]">{[user.firstName, user.lastName].filter(Boolean).join(" ") || user.email}</h3>
+                        <h3 className="truncate text-base font-semibold text-slate-900">{[user.firstName, user.lastName].filter(Boolean).join(" ") || user.email}</h3>
                         <StatusPill>{user.role}</StatusPill>
                         <StatusPill tone={user.isActive ? "good" : "danger"}>{user.isActive ? "Active" : "Inactive"}</StatusPill>
                     </div>
-                    <p className="mt-1 truncate text-xs text-[#9ca3af]">{user.email} · {user.clerkUserId}</p>
+                    <p className="mt-1 truncate text-xs text-slate-500">{user.email} · {user.clerkUserId}</p>
                 </div>
                 <button
                     onClick={() => onDelete(user.id)}
-                    className="rounded-md border border-[#1f1f1f] bg-[#111111] px-3 py-1.5 text-xs font-medium text-red-400 hover:bg-[#161616]"
+                    className="rounded-md border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-100"
                 >
                     Delete account
                 </button>
@@ -267,20 +270,20 @@ function UserCard({ user, onDelete }: { user: DomainUser; onDelete: (userId: str
 
 function DealTile({ deal }: { deal: Deal }) {
     return (
-        <article className="overflow-hidden rounded-xl border border-[#1f1f1f] bg-[#111111]">
-            <div className="flex h-24 items-center justify-center bg-[#111111]">
+        <article className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="flex h-24 items-center justify-center bg-slate-50">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={getDealImage(deal)} alt={deal.title} className="h-full w-full object-contain" loading="lazy" />
             </div>
             <div className="p-2">
                 <div className="flex items-start justify-between gap-2">
-                    <h3 className="line-clamp-1 text-sm font-medium text-[#e5e5e5]">{deal.title}</h3>
+                    <h3 className="line-clamp-1 text-sm font-semibold text-slate-900">{deal.title}</h3>
                     {deal.isHot ? <StatusPill tone="danger">Hot</StatusPill> : null}
                 </div>
-                <p className="mt-1 line-clamp-1 text-xs text-[#9ca3af]">{deal.description}</p>
+                <p className="mt-1 line-clamp-1 text-xs text-slate-500">{deal.description}</p>
                 <div className="mt-2 flex items-center justify-between gap-2">
-                    <p className="text-sm font-semibold text-[#e5e5e5]">{formatPrice(deal.price)}</p>
-                    <p className="truncate text-[10px] text-[#9ca3af]">{deal.brandSlug}</p>
+                    <p className="text-sm font-semibold text-slate-900">{formatPrice(deal.price)}</p>
+                    <p className="truncate text-[10px] text-slate-500">{deal.brandSlug}</p>
                 </div>
             </div>
         </article>
@@ -289,9 +292,33 @@ function DealTile({ deal }: { deal: Deal }) {
 
 function EmptyState({ title, body }: { title: string; body: string }) {
     return (
-        <div className="rounded-xl border border-dashed border-[#1f1f1f] bg-[#111111] p-3 text-center">
-            <h3 className="text-sm font-medium text-[#e5e5e5]">{title}</h3>
-            <p className="mt-1 text-xs text-[#9ca3af]">{body}</p>
+        <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-3 text-center">
+            <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
+            <p className="mt-1 text-xs text-slate-500">{body}</p>
+        </div>
+    );
+}
+
+function SkeletonCard({ className }: { className?: string }) {
+    return (
+        <div className={`rounded-2xl border border-slate-200 bg-white p-4 shadow-sm ${className ?? ""}`}>
+            <div className="h-3 w-24 animate-pulse rounded-full bg-slate-200" />
+            <div className="mt-3 h-4 w-40 animate-pulse rounded-full bg-slate-200" />
+            <div className="mt-2 h-3 w-28 animate-pulse rounded-full bg-slate-200" />
+        </div>
+    );
+}
+
+function SkeletonList({ rows = 3 }: { rows?: number }) {
+    return (
+        <div className="grid gap-3">
+            {Array.from({ length: rows }).map((_, index) => (
+                <div key={index} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <div className="h-4 w-48 animate-pulse rounded-full bg-slate-200" />
+                    <div className="mt-2 h-3 w-64 animate-pulse rounded-full bg-slate-200" />
+                    <div className="mt-2 h-3 w-40 animate-pulse rounded-full bg-slate-200" />
+                </div>
+            ))}
         </div>
     );
 }
@@ -348,20 +375,20 @@ function SignInGate() {
     };
 
     return (
-        <main className="min-h-screen bg-[#0b0b0b] px-4 py-4 text-[#e5e5e5]">
+        <main className="min-h-screen bg-[#f8f8f8] px-4 py-4 text-slate-900">
             <div className="mx-auto flex min-h-[calc(100vh-2rem)] w-full max-w-2xl items-center justify-center">
-                <section className="w-full rounded-xl border border-[#1f1f1f] bg-[#111111] p-4">
+                <section className="w-full rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                     <div>
-                        <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-[#9ca3af]">App admin</p>
-                        <h1 className="mt-1 text-xl font-semibold">Sign in required</h1>
-                        <p className="mt-1 text-xs text-[#9ca3af]">Use email/password or Google.</p>
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">App admin</p>
+                        <h1 className="mt-1 text-xl font-semibold text-slate-900">Sign in required</h1>
+                        <p className="mt-1 text-xs text-slate-500">Use email/password or Google.</p>
                     </div>
 
                     <button
                         type="button"
                         onClick={() => void signInWithGoogle()}
                         disabled={fetchStatus === "fetching" || isSubmitting}
-                        className="mt-4 flex w-full items-center justify-center rounded-md border border-[#1f1f1f] bg-[#111111] px-3 py-1.5 text-xs font-medium text-[#e5e5e5] transition hover:bg-[#161616] disabled:opacity-60"
+                        className="mt-4 flex w-full items-center justify-center rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-red-200 hover:text-red-700 disabled:opacity-60"
                     >
                         <span className="mr-2 flex h-4 w-4 items-center justify-center">
                             <svg aria-hidden="true" focusable="false" width="20" height="20" viewBox="0 0 533.5 544.3" xmlns="http://www.w3.org/2000/svg">
@@ -374,39 +401,39 @@ function SignInGate() {
                         <span>Continue with Google</span>
                     </button>
 
-                    <div className="my-4 flex items-center gap-2 text-[10px] uppercase tracking-[0.3em] text-[#9ca3af]">
-                        <span className="h-px flex-1 bg-[#1f1f1f]" />
+                    <div className="my-4 flex items-center gap-2 text-[10px] uppercase tracking-[0.3em] text-slate-400">
+                        <span className="h-px flex-1 bg-slate-200" />
                         <span>Or sign in with email</span>
-                        <span className="h-px flex-1 bg-[#1f1f1f]" />
+                        <span className="h-px flex-1 bg-slate-200" />
                     </div>
 
                     <form onSubmit={(event) => void submitPasswordSignIn(event)} className="grid gap-2">
-                        <label className="grid gap-1 text-xs font-medium text-[#e5e5e5]">
-                            <span><span className="text-red-400">*</span> Email</span>
+                        <label className="grid gap-1 text-xs font-semibold text-slate-800">
+                            <span><span className="text-red-600">*</span> Email</span>
                             <input
                                 type="email"
                                 value={email}
                                 onChange={(event) => setEmail(event.target.value)}
-                                className="rounded-lg border border-[#1f1f1f] bg-[#111111] px-3 py-2 text-sm text-[#e5e5e5] outline-none focus:border-red-500"
+                                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-red-500"
                             />
                         </label>
 
-                        <label className="grid gap-1 text-xs font-medium text-[#e5e5e5]">
-                            <span><span className="text-red-400">*</span> Password</span>
+                        <label className="grid gap-1 text-xs font-semibold text-slate-800">
+                            <span><span className="text-red-600">*</span> Password</span>
                             <input
                                 type="password"
                                 value={password}
                                 onChange={(event) => setPassword(event.target.value)}
-                                className="rounded-lg border border-[#1f1f1f] bg-[#111111] px-3 py-2 text-sm text-[#e5e5e5] outline-none focus:border-red-500"
+                                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-red-500"
                             />
                         </label>
 
-                        {message ? <p className="text-xs text-red-400">{message}</p> : null}
+                        {message ? <p className="text-xs text-red-600">{message}</p> : null}
 
                         <button
                             type="submit"
                             disabled={fetchStatus === "fetching" || isSubmitting}
-                            className="rounded-md border border-[#1f1f1f] bg-[#111111] px-3 py-1.5 text-xs font-medium text-[#e5e5e5] transition hover:bg-[#161616] disabled:opacity-60"
+                            className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 transition hover:bg-red-100 disabled:opacity-60"
                         >
                             {fetchStatus === "fetching" || isSubmitting ? "Signing in..." : "Sign in to dashboard"}
                         </button>
@@ -418,26 +445,31 @@ function SignInGate() {
 }
 
 export default function AppAdminApprovalsPage() {
+    const { signOut } = useClerk();
     const { isLoaded, isSignedIn, getToken } = useAuth();
     const [activeTab, setActiveTab] = useState<AdminTab>("overview");
+    const [brandFilter, setBrandFilter] = useState<BrandFilter>("pending");
     const [overview, setOverview] = useState<AppAdminOverview | null>(null);
     const [allBrands, setAllBrands] = useState<AdminBrand[]>([]);
     const [pendingBrands, setPendingBrands] = useState<AdminBrand[]>([]);
+    const [approvedBrands, setApprovedBrands] = useState<AdminBrand[]>([]);
+    const [rejectedBrands, setRejectedBrands] = useState<AdminBrand[]>([]);
     const [brandAdmins, setBrandAdmins] = useState<AdminUser[]>([]);
     const [endUsers, setEndUsers] = useState<DomainUser[]>([]);
-    const [message, setMessage] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
+    const { toasts, pushToast, dismiss } = useToast();
 
     const load = useCallback(async () => {
         setLoading(true);
-        setMessage(null);
         const token = await getToken();
         const headers = authHeaders(token);
 
-        const [overviewResponse, brandsResponse, pendingResponse, brandAdminsResponse, endUsersResponse] = await Promise.all([
+        const [overviewResponse, brandsResponse, pendingResponse, approvedResponse, rejectedResponse, brandAdminsResponse, endUsersResponse] = await Promise.all([
             fetch(`${apiBaseUrl}/api/app-admin/overview`, { headers }),
             fetch(`${apiBaseUrl}/api/app-admin/brands`, { headers }),
             fetch(`${apiBaseUrl}/api/app-admin/brands/pending`, { headers }),
+            fetch(`${apiBaseUrl}/api/app-admin/brands/approved`, { headers }),
+            fetch(`${apiBaseUrl}/api/app-admin/brands/rejected`, { headers }),
             fetch(`${apiBaseUrl}/api/app-admin/brand-admins`, { headers }),
             fetch(`${apiBaseUrl}/api/app-admin/end-users`, { headers }),
         ]);
@@ -457,6 +489,16 @@ export default function AppAdminApprovalsPage() {
             throw new Error(pendingPayload?.message ?? "Could not load pending brands.");
         }
 
+        const approvedPayload = await readJsonResponse<{ data?: AdminBrand[]; message?: string }>(approvedResponse);
+        if (!approvedResponse.ok) {
+            throw new Error(approvedPayload?.message ?? "Could not load approved brands.");
+        }
+
+        const rejectedPayload = await readJsonResponse<{ data?: AdminBrand[]; message?: string }>(rejectedResponse);
+        if (!rejectedResponse.ok) {
+            throw new Error(rejectedPayload?.message ?? "Could not load rejected brands.");
+        }
+
         const brandAdminsPayload = await readJsonResponse<{ data?: AdminUser[]; message?: string }>(brandAdminsResponse);
         if (!brandAdminsResponse.ok) {
             throw new Error(brandAdminsPayload?.message ?? "Could not load brand admins.");
@@ -470,6 +512,8 @@ export default function AppAdminApprovalsPage() {
         setOverview(overviewPayload?.data ?? null);
         setAllBrands(brandsPayload?.data ?? []);
         setPendingBrands(pendingPayload?.data ?? []);
+        setApprovedBrands(approvedPayload?.data ?? []);
+        setRejectedBrands(rejectedPayload?.data ?? []);
         setBrandAdmins(brandAdminsPayload?.data ?? []);
         setEndUsers(endUsersPayload?.data ?? []);
         setLoading(false);
@@ -479,10 +523,14 @@ export default function AppAdminApprovalsPage() {
         if (!isLoaded || !isSignedIn) return;
 
         void load().catch((error) => {
-            setMessage(error instanceof Error ? error.message : "Could not load app admin dashboard.");
+            pushToast({
+                tone: "error",
+                title: "Dashboard failed to load",
+                message: error instanceof Error ? error.message : "Could not load app admin dashboard.",
+            });
             setLoading(false);
         });
-    }, [isLoaded, isSignedIn, load]);
+    }, [isLoaded, isSignedIn, load, pushToast]);
 
     const stats = useMemo(
         () => [
@@ -499,7 +547,6 @@ export default function AppAdminApprovalsPage() {
     }
 
     const decide = async (brandId: string, action: "approve" | "reject") => {
-        setMessage(null);
         const token = await getToken();
         const response = await fetch(`${apiBaseUrl}/api/app-admin/brands/${brandId}/${action}`, {
             method: "PATCH",
@@ -509,17 +556,25 @@ export default function AppAdminApprovalsPage() {
 
         const payload = await readJsonResponse<{ message?: string }>(response);
         if (!response.ok) {
-            setMessage(payload?.message ?? `Could not ${action} brand.`);
+            pushToast({
+                tone: "error",
+                title: `Brand ${action === "approve" ? "approval" : "rejection"} failed`,
+                message: payload?.message ?? `Could not ${action} brand.`,
+            });
             return;
         }
 
+        pushToast({
+            tone: "success",
+            title: `Brand ${action === "approve" ? "approved" : "rejected"}`,
+            message: action === "approve" ? "The brand is now active." : "The brand has been rejected.",
+        });
         await load();
     };
 
     const suspendBrandAdmin = async (userId: string) => {
         if (!confirm("Suspend this brand admin and disable their linked brand/deals?")) return;
 
-        setMessage(null);
         const token = await getToken();
         const response = await fetch(`${apiBaseUrl}/api/app-admin/brand-admins/${encodeURIComponent(userId)}/suspend`, {
             method: "PATCH",
@@ -528,17 +583,25 @@ export default function AppAdminApprovalsPage() {
         const payload = await readJsonResponse<{ message?: string }>(response);
 
         if (!response.ok) {
-            setMessage(payload?.message ?? "Could not suspend brand admin.");
+            pushToast({
+                tone: "error",
+                title: "Suspend failed",
+                message: payload?.message ?? "Could not suspend brand admin.",
+            });
             return;
         }
 
+        pushToast({
+            tone: "success",
+            title: "Brand admin suspended",
+            message: "The brand admin has been suspended.",
+        });
         await load();
     };
 
     const deleteBrandAdmin = async (userId: string) => {
         if (!confirm("Permanently remove this brand admin, their brand, and that brand's deals?")) return;
 
-        setMessage(null);
         const token = await getToken();
         const response = await fetch(`${apiBaseUrl}/api/app-admin/brand-admins/${encodeURIComponent(userId)}`, {
             method: "DELETE",
@@ -547,17 +610,25 @@ export default function AppAdminApprovalsPage() {
         const payload = await readJsonResponse<{ message?: string }>(response);
 
         if (!response.ok) {
-            setMessage(payload?.message ?? "Could not remove brand admin.");
+            pushToast({
+                tone: "error",
+                title: "Removal failed",
+                message: payload?.message ?? "Could not remove brand admin.",
+            });
             return;
         }
 
+        pushToast({
+            tone: "success",
+            title: "Brand admin removed",
+            message: "The brand admin and linked data were removed.",
+        });
         await load();
     };
 
     const deleteEndUser = async (userId: string) => {
         if (!confirm("Permanently delete this end user account?")) return;
 
-        setMessage(null);
         const token = await getToken();
         const response = await fetch(`${apiBaseUrl}/api/app-admin/end-users/${encodeURIComponent(userId)}`, {
             method: "DELETE",
@@ -566,63 +637,167 @@ export default function AppAdminApprovalsPage() {
         const payload = await readJsonResponse<{ message?: string }>(response);
 
         if (!response.ok) {
-            setMessage(payload?.message ?? "Could not delete end user.");
+            pushToast({
+                tone: "error",
+                title: "Delete failed",
+                message: payload?.message ?? "Could not delete end user.",
+            });
             return;
         }
 
+        pushToast({
+            tone: "success",
+            title: "End user deleted",
+            message: "The end user account was deleted.",
+        });
         await load();
     };
 
 
 
-    const topDeals = overview?.topDeals ?? [];
-    const approvedBrands = allBrands.filter((brand) => brand.approvalStatus === "APPROVED");
-    const pendingBrandsList = pendingBrands.length > 0 ? pendingBrands : allBrands.filter((brand) => brand.approvalStatus === "PENDING");
+    const pendingBrandsList = pendingBrands;
+    const activeBrandList = brandFilter === "approved"
+        ? approvedBrands
+        : brandFilter === "rejected"
+            ? rejectedBrands
+            : pendingBrandsList;
 
     return (
-        <main className="min-h-screen bg-[#0b0b0b] px-4 py-4 text-[#e5e5e5]">
-            <div className="mx-auto max-w-7xl">
-                <header className="rounded-xl border border-[#1f1f1f] bg-[#111111] p-3">
-                    <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-[#9ca3af]">App admin</p>
-                    <div className="mt-2 flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
+        <main className="min-h-screen bg-[#f6f6f6] text-slate-900">
+            <ToastStack toasts={toasts} onDismiss={dismiss} />
+            <div className="mx-auto flex min-h-screen max-w-7xl gap-6 px-4 py-6">
+                <aside className="hidden w-64 flex-col justify-between rounded-3xl border border-slate-200 bg-white p-6 shadow-sm lg:flex">
+                    <div className="space-y-6">
                         <div>
-                            <h1 className="text-xl font-semibold">Admin control center</h1>
-                            <p className="mt-1 max-w-3xl text-xs text-[#9ca3af]">Review brands, users, and deals.</p>
+                            <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-slate-400">App admin</p>
+                            <h2 className="mt-2 text-lg font-semibold text-slate-900">Control suite</h2>
+                            <p className="mt-1 text-xs text-slate-500">Full oversight for approvals, users, and deals.</p>
                         </div>
-                        <div className="flex flex-wrap gap-4 border-b border-[#1f1f1f]">
+
+                        <nav className="space-y-2">
                             {tabs.map((tab) => (
                                 <button
                                     key={tab.id}
                                     onClick={() => setActiveTab(tab.id)}
-                                    className={`border-b-2 px-1 pb-2 text-xs font-medium transition ${activeTab === tab.id ? "border-red-500 text-[#e5e5e5]" : "border-transparent text-[#9ca3af] hover:text-[#e5e5e5]"}`}
+                                    className={`flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left text-xs font-semibold transition ${
+                                        activeTab === tab.id
+                                            ? "border-red-200 bg-red-50 text-red-700"
+                                            : "border-transparent text-slate-600 hover:border-slate-200 hover:bg-slate-50"
+                                    }`}
                                 >
-                                    {tab.label}
+                                    <span>{tab.label}</span>
+                                    <span className={`text-[10px] ${activeTab === tab.id ? "text-red-600" : "text-slate-400"}`}>View</span>
                                 </button>
                             ))}
-                        </div>
+                        </nav>
                     </div>
-                </header>
 
-                {message ? <p className="mt-3 rounded-lg border border-[#1f1f1f] bg-[#111111] px-3 py-2 text-xs text-red-400">{message}</p> : null}
-                {loading ? <p className="mt-3 text-xs text-[#9ca3af]">Loading dashboard...</p> : null}
+                    <div className="rounded-2xl border border-yellow-200 bg-yellow-50 p-3">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-yellow-700">System status</p>
+                        <p className="mt-1 text-xs text-slate-600">Approvals and moderation actions are live.</p>
+                    </div>
+                </aside>
 
-                {!loading && activeTab === "overview" ? (
-                    <section className="mt-4 grid gap-4">
-                        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-6">
-                            {stats.map((stat) => (
-                                <StatCard key={stat.label} label={stat.label} value={stat.value} tone={stat.tone} />
-                            ))}
-                        </div>
-
-                        <div className="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
+                <section className="flex-1 space-y-4">
+                    <header className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+                        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                             <div>
+                                <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400">App admin</p>
+                                <h1 className="mt-1 text-2xl font-semibold text-slate-900">Admin control center</h1>
+                                <p className="mt-1 max-w-3xl text-xs text-slate-500">Review brands, users, and deals with precision and clear auditability.</p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => void signOut()}
+                                className="rounded-md border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-100"
+                            >
+                                Log out
+                            </button>
+                        </div>
+                    </header>
+
+                    {loading ? <p className="text-xs text-slate-500">Loading dashboard...</p> : null}
+
+                    {loading && activeTab === "overview" ? (
+                        <section className="grid gap-4">
+                            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                                {Array.from({ length: 4 }).map((_, index) => (
+                                    <SkeletonCard key={index} />
+                                ))}
+                            </div>
+                            <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+                                <div className="flex items-center justify-between">
+                                    <div className="h-4 w-32 animate-pulse rounded-full bg-slate-200" />
+                                    <div className="h-5 w-16 animate-pulse rounded-full bg-slate-200" />
+                                </div>
+                                <div className="mt-3">
+                                    <SkeletonList rows={3} />
+                                </div>
+                            </div>
+                        </section>
+                    ) : null}
+
+                    {loading && activeTab === "brands" ? (
+                        <section className="grid gap-4">
+                            <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+                                <div className="flex items-center justify-between">
+                                    <div className="h-4 w-36 animate-pulse rounded-full bg-slate-200" />
+                                    <div className="h-5 w-16 animate-pulse rounded-full bg-slate-200" />
+                                </div>
+                                <div className="mt-3">
+                                    <SkeletonList rows={3} />
+                                </div>
+                            </div>
+                            <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+                                <div className="h-4 w-40 animate-pulse rounded-full bg-slate-200" />
+                                <div className="mt-3">
+                                    <SkeletonList rows={2} />
+                                </div>
+                            </div>
+                        </section>
+                    ) : null}
+
+                    {loading && activeTab === "users" ? (
+                        <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+                            <div className="flex items-center justify-between">
+                                <div className="h-4 w-28 animate-pulse rounded-full bg-slate-200" />
+                                <div className="h-5 w-16 animate-pulse rounded-full bg-slate-200" />
+                            </div>
+                            <div className="mt-3">
+                                <SkeletonList rows={4} />
+                            </div>
+                        </section>
+                    ) : null}
+
+                    {loading && activeTab === "deals" ? (
+                        <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+                            <div className="flex items-center justify-between">
+                                <div className="h-4 w-36 animate-pulse rounded-full bg-slate-200" />
+                                <div className="h-5 w-16 animate-pulse rounded-full bg-slate-200" />
+                            </div>
+                            <div className="mt-3">
+                                <SkeletonList rows={3} />
+                            </div>
+                        </section>
+                    ) : null}
+
+                    {!loading && activeTab === "overview" ? (
+                        <section className="grid gap-4">
+                            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                                {stats.map((stat) => (
+                                    <StatCard key={stat.label} label={stat.label} value={stat.value} tone={stat.tone} />
+                                ))}
+                            </div>
+
+                            <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
                                 <div className="flex items-end justify-between gap-2">
                                     <div>
-                                        <h2 className="text-lg font-semibold">All brands</h2>
+                                        <h2 className="text-lg font-semibold text-slate-900">All brands</h2>
+                                        <p className="text-xs text-slate-500">Everything registered so far.</p>
                                     </div>
                                     <StatusPill tone="good">{allBrands.length} brands</StatusPill>
                                 </div>
-                                <div className="mt-2 grid gap-2">
+                                <div className="mt-3 grid gap-3">
                                     {allBrands.map((brand) => (
                                         <BrandCard key={brand.brandId} brand={brand} />
                                     ))}
@@ -631,123 +806,109 @@ export default function AppAdminApprovalsPage() {
                                     ) : null}
                                 </div>
                             </div>
+                        </section>
+                    ) : null}
 
-                            <div>
+                    {!loading && activeTab === "deals" ? <AppAdminAnalyticsMain showSignOut={false} /> : null}
+
+                    {!loading && activeTab === "brands" ? (
+                        <section className="grid gap-4">
+                            <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+                                <div className="flex flex-wrap items-center justify-between gap-3">
+                                    <div>
+                                        <h2 className="text-lg font-semibold text-slate-900">Brand approvals</h2>
+                                        <p className="text-xs text-slate-500">Switch between pending, approved, and rejected lists.</p>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2 rounded-full border border-slate-200 bg-slate-50 p-1">
+                                        {([
+                                            { id: "pending", label: "Pending" },
+                                            { id: "approved", label: "Approved" },
+                                            { id: "rejected", label: "Rejected" },
+                                        ] as const).map((item) => (
+                                            <button
+                                                key={item.id}
+                                                onClick={() => setBrandFilter(item.id)}
+                                                className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+                                                    brandFilter === item.id
+                                                        ? "bg-white text-red-700 shadow-sm"
+                                                        : "text-slate-500 hover:text-slate-900"
+                                                }`}
+                                            >
+                                                {item.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
                                 <div className="flex items-end justify-between gap-2">
                                     <div>
-                                        <h2 className="text-lg font-semibold">Top deals</h2>
+                                        <h2 className="text-lg font-semibold text-slate-900">
+                                            {brandFilter === "approved"
+                                                ? "Approved brands"
+                                                : brandFilter === "rejected"
+                                                    ? "Rejected brands"
+                                                    : "Pending brands"}
+                                        </h2>
+                                        <p className="text-xs text-slate-500">
+                                            {brandFilter === "approved"
+                                                ? "All active partners."
+                                                : brandFilter === "rejected"
+                                                    ? "Declined applications for reference."
+                                                    : "Approve or reject incoming requests."}
+                                        </p>
                                     </div>
-                                    <StatusPill tone="danger">{topDeals.length} live</StatusPill>
+                                    <StatusPill tone={brandFilter === "approved" ? "good" : brandFilter === "rejected" ? "danger" : "warn"}>
+                                        {activeBrandList.length} {brandFilter}
+                                    </StatusPill>
                                 </div>
-                                <div className="mt-2 grid gap-2 sm:grid-cols-2 xl:grid-cols-6">
-                                    {topDeals.map((deal) => (
-                                        <DealTile key={deal.dealId} deal={deal} />
+                                <div className="mt-3 grid gap-3">
+                                    {activeBrandList.map((brand) => (
+                                        <BrandCard
+                                            key={brand.brandId}
+                                            brand={brand}
+                                            showActions={brandFilter === "pending"}
+                                            onApprove={(brandId) => void decide(brandId, "approve")}
+                                            onReject={(brandId) => void decide(brandId, "reject")}
+                                        />
                                     ))}
-                                    {topDeals.length === 0 ? (
-                                        <EmptyState title="No top deals" body="Top deals will appear here once the deals service returns active results." />
+                                    {activeBrandList.length === 0 ? (
+                                        <EmptyState
+                                            title={brandFilter === "approved" ? "No approved brands" : brandFilter === "rejected" ? "No rejected brands" : "No pending brands"}
+                                            body={
+                                                brandFilter === "approved"
+                                                    ? "Approved brands will show up here after review."
+                                                    : brandFilter === "rejected"
+                                                        ? "Rejected brands will appear here after review."
+                                                        : "New brand admin requests will appear here."
+                                            }
+                                        />
                                     ) : null}
                                 </div>
                             </div>
-                        </div>
-                    </section>
-                ) : null}
+                        </section>
+                    ) : null}
 
-                {!loading && activeTab === "brands" ? (
-                    <section className="mt-4 grid gap-4">
-                        <div>
+                    {!loading && activeTab === "users" ? (
+                        <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
                             <div className="flex items-end justify-between gap-2">
                                 <div>
-                                    <h2 className="text-lg font-semibold">Pending brands</h2>
+                                    <h2 className="text-lg font-semibold text-slate-900">End users</h2>
+                                    <p className="text-xs text-slate-500">Customer accounts across the platform.</p>
                                 </div>
-                                <StatusPill tone="warn">{pendingBrandsList.length} pending</StatusPill>
+                                <StatusPill tone="good">{endUsers.length} users</StatusPill>
                             </div>
-                            <div className="mt-2 grid gap-2">
-                                {pendingBrandsList.map((brand) => (
-                                    <BrandCard
-                                        key={brand.brandId}
-                                        brand={brand}
-                                        showActions
-                                        onApprove={(brandId) => void decide(brandId, "approve")}
-                                        onReject={(brandId) => void decide(brandId, "reject")}
-                                    />
+                            <div className="mt-3 grid gap-3">
+                                {endUsers.map((user) => (
+                                    <UserCard key={user.id} user={user} onDelete={(userId) => void deleteEndUser(userId)} />
                                 ))}
-                                {pendingBrandsList.length === 0 ? (
-                                    <EmptyState title="No pending brands" body="New brand admin requests will appear here." />
-                                ) : null}
+                                {endUsers.length === 0 ? <EmptyState title="No end users" body="Consumer accounts will appear here once users sign up." /> : null}
                             </div>
-                        </div>
+                        </section>
+                    ) : null}
 
-                        <div>
-                            <h2 className="text-lg font-semibold">All brand admins</h2>
-                            <div className="mt-2 grid gap-2">
-                                {brandAdmins.map((user) => (
-                                    <BrandAdminUserCard
-                                        key={user.id}
-                                        user={user}
-                                        onSuspend={(userId) => void suspendBrandAdmin(userId)}
-                                        onDelete={(userId) => void deleteBrandAdmin(userId)}
-                                    />
-                                ))}
-                                {brandAdmins.length === 0 ? (
-                                    <EmptyState title="No brand admins" body="Brand admins will appear here once accounts are created." />
-                                ) : null}
-                            </div>
-                        </div>
-
-                        <div>
-                            <div className="flex items-end justify-between gap-2">
-                                <div>
-                                    <h2 className="text-lg font-semibold">Approved brands</h2>
-                                </div>
-                                <StatusPill tone="good">{approvedBrands.length} approved</StatusPill>
-                            </div>
-                            <div className="mt-2 grid gap-2 sm:grid-cols-2 xl:grid-cols-6">
-                                {approvedBrands.map((brand) => (
-                                    <BrandCard key={brand.brandId} brand={brand} />
-                                ))}
-                                {approvedBrands.length === 0 ? (
-                                    <EmptyState title="No approved brands" body="Approved brands will show up here after review." />
-                                ) : null}
-                            </div>
-                        </div>
-                    </section>
-                ) : null}
-
-                {!loading && activeTab === "users" ? (
-                    <section className="mt-4">
-                        <div className="flex items-end justify-between gap-2">
-                            <div>
-                                <h2 className="text-lg font-semibold">End users</h2>
-                            </div>
-                            <StatusPill tone="good">{endUsers.length} users</StatusPill>
-                        </div>
-                        <div className="mt-2 grid gap-2">
-                            {endUsers.map((user) => (
-                                <UserCard key={user.id} user={user} onDelete={(userId) => void deleteEndUser(userId)} />
-                            ))}
-                            {endUsers.length === 0 ? <EmptyState title="No end users" body="Consumer accounts will appear here once users sign up." /> : null}
-                        </div>
-                    </section>
-                ) : null}
-
-                {!loading && activeTab === "deals" ? (
-                    <section className="mt-4">
-                        <div className="flex items-end justify-between gap-2">
-                            <div>
-                                <h2 className="text-lg font-semibold">Top deals</h2>
-                            </div>
-                            <StatusPill tone="danger">{topDeals.length} deals</StatusPill>
-                        </div>
-                        <div className="mt-2 grid gap-2 sm:grid-cols-2 xl:grid-cols-6">
-                            {topDeals.map((deal) => (
-                                <DealTile key={deal.dealId} deal={deal} />
-                            ))}
-                            {topDeals.length === 0 ? (
-                                <EmptyState title="No top deals" body="Top deals will appear here once the deals service returns active results." />
-                            ) : null}
-                        </div>
-                    </section>
-                ) : null}
+                </section>
             </div>
         </main>
     );
